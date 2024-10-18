@@ -107,10 +107,24 @@ SDF and Canvas Web versions of the fonts equally if both versions are required
 by your application to ensure consistent text layout between SDF and Canvas
 Text Renderers.
 
+## Presets
+A centralized JSON file that contains characters from various languages and assents, organized into categories such as  `numeric`, `accents` and `symbols` ...
+
+```JSON
+ {
+  numeric: "",
+  accents: "",
+  symbols: ""
+ }
+```
+
 ## Adjusting the Charset
 
-The contents of `font-src/charset.txt` can be modified to adjust the characters
-that are included into the SDF font.
+The  `font-src/charset.config.json` includes two options  `charset` & `presets`. 
+- `charset` option content can be modified to adjust the characters
+that are included into the SDF font. 
+- `presets` option provides a way to easily manage and include predefined group of characters by referencing required presets from `presets.json` file
+
 
 ## Overrides (Advanced)
 
