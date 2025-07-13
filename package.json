@@ -37,6 +37,7 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
+    "canvas": "^3.1.2",
     "chalk": "^5.3.0",
     "fs-extra": "^11.2.0",
     "msdf-bmfont-xml": "https://github.com/soimy/msdf-bmfont-xml.git#5a2495a14a1ebd3170d49350f450b6e3f531a941",
