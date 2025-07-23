@@ -255,7 +255,7 @@ async function generateFontFamily(
       fieldType: bmfont_field_type,
       outputType: 'json',
       roundDecimal: 6,
-      smartSize: false,
+      smartSize: true,
       pot: true,
       fontSize: font_size,
       distanceRange: distance_range,
@@ -433,7 +433,7 @@ export async function genFont(fontFileName: string, fieldType: 'ssdf' | 'msdf'):
     fieldType: bmfont_field_type,
     outputType: 'json',
     roundDecimal: 6,
-    smartSize: false, // Disable smartSize to use explicit texture dimensions
+    smartSize: true,
     pot: true,
     fontSize: font_size,
     distanceRange: distance_range,
