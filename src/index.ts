@@ -16,7 +16,7 @@
  */
 
 import { adjustFont } from './adjustFont.js';
-import { genFont, setGeneratePaths } from './genFont.js';
+import { genFont, genFontsByFamily, setGeneratePaths } from './genFont.js';
 import fs from 'fs-extra';
 import chalk from 'chalk';
 
@@ -37,22 +37,74 @@ fs.ensureDirSync(fontDstDir);
 export async function generateFonts() {
   try {
     const files = fs.readdirSync(fontSrcDir);
-    let fontsFound = 0;
-    for (const file of files) {
-      for (const ext of font_exts) {
-        if (file.endsWith(ext)) {
-          fontsFound++;
-          const msdfFont = await genFont(file, 'msdf');
-          if (msdfFont) await adjustFont(msdfFont);
-
-          const ssdfFont = await genFont(file, 'ssdf');
-          if (ssdfFont) await adjustFont(ssdfFont);
-        }
-      }
-    }
-    if (fontsFound === 0) {
+    const fontFiles = files.filter(file => 
+      font_exts.some(ext => file.endsWith(ext))
+    );
+    
+    if (fontFiles.length === 0) {
       console.log(chalk.red.bold('No font files found in `font-src` directory. Exiting...'));
       process.exit(1);
+    }
+
+    // Parse command line arguments
+    const args = process.argv.slice(2);
+    let useFamily = false; // Default to no family grouping
+    
+    // Check for --individual or -i flag to use individual mode
+    if (args.includes('--individual') || args.includes('-i')) {
+      useFamily = false;
+    }
+    
+    // Check for --family or -f flag to explicitly use family mode
+    if (args.includes('--family') || args.includes('-f')) {
+      useFamily = true;
+    }
+    
+    // Check for --help or -h flag
+    if (args.includes('--help') || args.includes('-h')) {
+      console.log(chalk.cyan('\nUsage: npm run generate [options]'));
+      console.log(chalk.cyan('\nOptions:'));
+      console.log(chalk.cyan('  --family, -f      Group fonts by family (Only ttf/otf files)'));
+      console.log(chalk.cyan('  --individual, -i  Generate individual fonts (default)'));
+      console.log(chalk.cyan('  --help, -h        Show this help message'));
+      console.log(chalk.cyan('\nFamily mode groups font styles (Regular, Bold, Italic) into'));
+      console.log(chalk.cyan('separate pages within the same atlas for optimal WebGL performance.'));
+      console.log(chalk.cyan('\nIndividual mode generates separate atlases for each font file.'));
+      console.log(chalk.cyan("Woff and Woff2 formats are only supported in individual mode."));
+      process.exit(0);
+    }
+    
+    console.log(chalk.yellow(`Generation mode: ${useFamily ? 'Family grouping' : 'Individual fonts'}`));
+    console.log(chalk.gray(`(Use --individual or --family to change mode, --help for options)`));
+    
+    if (useFamily) {
+      console.log(chalk.green('\nGenerating fonts by family (styles as separate pages)...'));
+      
+      // Generate MSDF fonts grouped by family
+      const msdfFamilies = await genFontsByFamily(fontFiles, 'msdf');
+      console.log(chalk.green(`Generated ${msdfFamilies.length} MSDF families`));
+      for (const family of msdfFamilies) {
+        console.log(chalk.green(`Generated MSDF family: ${family.fontFamily} with ${family.styles.length} styles`));
+        if (family) await adjustFont(family);
+      }
+      
+      // Generate SSDF fonts grouped by family
+      const ssdfFamilies = await genFontsByFamily(fontFiles, 'ssdf');
+      for (const family of ssdfFamilies) {
+        console.log(chalk.green(`Generated SSDF family: ${family.fontFamily} with ${family.styles.length} styles`));
+        if (family) await adjustFont(family);
+      }
+    } else {
+      console.log(chalk.green('\nGenerating individual fonts (original behavior)...'));
+      
+      // Original individual font generation
+      for (const file of fontFiles) {
+        const msdfFont = await genFont(file, 'msdf');
+        if (msdfFont) await adjustFont(msdfFont);
+
+        const ssdfFont = await genFont(file, 'ssdf');
+        if (ssdfFont) await adjustFont(ssdfFont);
+      }
     }
   } catch (error) {
     console.error(chalk.red('Error generating fonts:'), error);

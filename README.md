@@ -30,10 +30,26 @@ cp -R font-src-sample font-src
 
 1. Copy Fonts: Place all the font files you want to convert to SDF fonts into the `font-src` directory.
 
-2. Generate SDF Textures: Run the following command to generate SDF textures from the font files:
+2. Generate SDF Textures: Run the following command to generate SDF textures from the font files. You can control how fonts are processed using command line options:
 
+```sh
+pnpm generate [options]
 ```
-pnpm generate
+
+**Options:**
+- `--family`, `-f`      Group fonts by family (Only ttf/otf files)
+- `--individual`, `-i`  Generate individual fonts (default)
+- `--help`, `-h`        Show this help message
+
+**Family mode** groups font styles (Regular, Bold, Italic) into separate pages within the same atlas for optimal WebGL performance.
+
+**Individual mode** generates separate atlases for each font file. WOFF and WOFF2 formats are only supported in individual mode.
+
+**Examples:**
+```sh
+pnpm generate --family
+pnpm generate --individual
+pnpm generate --help
 ```
 
 3. Access Generated Files: The generated SDF font files will be available in the `font-dst` directory.
@@ -121,6 +137,10 @@ By default this tool will generate SDF fonts with these properties:
 - Distance Range: 4
   - The distance range defines number of pixels of used in rendering the actual signed-distance field of the atlas texture.
   - Generally this value shouldn't have to be adjusted, but feel free to tweak along with the font size in order to get the highest quality text rendering with the smallest atlas texture size. It **must** be a multiple of 2.
+- textureWidth: 2048
+  The width of the output PNG texture atlas that contains the rendered font glyphs.
+- textureHeight: 2048
+  The height of the output PNG texture atlas that contains the rendered font glyphs.
 
 For each font file in the `font-src` directory you can define overrides for these values in the `font-src/overrides.json` file.
 
