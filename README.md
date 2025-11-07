@@ -140,3 +140,11 @@ Below is an example of overriding font size and distance range for the Ubuntu-Re
   }
 }
 ```
+
+
+## CI/CD Pipeline Build Failures and Platform Compatibility
+
+- `msdfgen` is available for five platforms: Windows x64, Linux x64, Linux ARM64, macOS x64, and macOS ARM64. Among these, only the Linux builds both x64 and ARM64 depend on GLIBC, which is the standard C library used by Linux systems. The Windows and macOS builds do not rely on GLIBC because they use platform-specific runtime libraries: MSVC for Windows and Apple’s libc for macOS.
+- The Linux x64 build uses the ubuntu-latest runner, which currently maps to Ubuntu 22.04 LTS and includes GLIBC 2.35. The Linux ARM64 build uses the ubuntu-24.04-arm runner, which is based on Ubuntu 24.04 LTS and includes GLIBC 2.39 or newer.
+- If your Docker image is based on an older Linux distribution like Ubuntu 22.04 or Debian Bullseye, the binary will fail to run due to a GLIBC mismatch. This happens because the binary expects symbols from a newer version of GLIBC that are not present in the container’s runtime environment. To resolve this, you must use a newer base image in your Dockerfile that includes GLIBC 2.38 or higher—such as `Debian Trixie`, `Ubuntu 24.04`, or `Fedora 39`. This ensures compatibility and prevents runtime errors caused by linking against unavailable system libraries.
+
