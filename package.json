@@ -37,6 +37,7 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
+    "canvas": "^3.1.2",
     "chalk": "^5.3.0",
     "fs-extra": "^11.2.0",
     "msdf-bmfont-xml": "^2.8.0",
