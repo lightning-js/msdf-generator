@@ -12,7 +12,7 @@
     "start": "tsc && node dist/index.js",
     "generate": "pnpm run start",
     "prepublishOnly": "pnpm run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsc && node --test 'tests/**/*.test.js'"
   },
   "author": "Comcast Cable Communications Management, LLC",
   "license": "Apache-2.0",
