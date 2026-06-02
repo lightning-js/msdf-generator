@@ -487,8 +487,9 @@ const generateFont = (fontSrcPath: string, fontDestPath: string, fontName: strin
           const pngPaths: string[] = [];
           textures.forEach((texture: any, index: number) => {
             try {
-              // Handle multiple textures for pagination
-              const textureFileName = textures.length > 1 
+              // Page 0 uses the unindexed name so the renderer's atlasUrl resolves without
+              // a page suffix. Extra pages get _1, _2, ... suffixes.
+              const textureFileName = (textures.length > 1 && index > 0)
                 ? `${fontName}.${fieldType}_${index}.png`
                 : `${fontName}.${fieldType}.png`;
               const texturePath = path.resolve(fontDestPath, textureFileName);
@@ -500,7 +501,12 @@ const generateFont = (fontSrcPath: string, fontDestPath: string, fontName: strin
             }
           })
           try {
-            fs.writeFileSync(path.resolve(fontDestPath, `${fontName}.${fieldType}.json`), font.data)
+            // msdf-bmfont-xml sets pages[] to its own internal names, so overwrite
+            // them with the filenames actually written to disk.
+            const json = JSON.parse(font.data)
+            json.pages = pngPaths.map(p => path.basename(p))
+            const jsonPath = path.resolve(fontDestPath, `${fontName}.${fieldType}.json`)
+            fs.writeFileSync(jsonPath, JSON.stringify(json))
             resolve({pngPaths})
           } catch (e) {
             console.error(err)
