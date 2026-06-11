@@ -109,8 +109,16 @@ Text Renderers.
 
 ## Adjusting the Charset
 
-The contents of `font-src/charset.txt` can be modified to adjust the characters
-that are included into the SDF font.
+If no `charset.config.json` is present, all printable ASCII characters are included in the atlas. To change which characters are generated, create a `charset.config.json` file in the `font-src` directory:
+
+```json
+{
+  "charset": "0123456789éåaü",
+  "presets": []
+}
+```
+
+This applies to all fonts in the `font-src` directory.
 
 ## Overrides (Advanced)
 
@@ -119,28 +127,75 @@ By default this tool will generate SDF fonts with these properties:
   - This is the size of the font that is rendered into the atlas texture PNG.
   - Generally bigger values result in clearer fonts with less potential of artifacts. However, bigger values can also dramatically increase the size of the texture so keep this value as small as possible if you make adjustments.
 - Distance Range: 4
-  - The distance range defines number of pixels of used in rendering the actual signed-distance field of the atlas texture.
+  - The distance range defines number of pixels used in rendering the actual signed-distance field of the atlas texture.
   - Generally this value shouldn't have to be adjusted, but feel free to tweak along with the font size in order to get the highest quality text rendering with the smallest atlas texture size. It **must** be a multiple of 2.
 
 For each font file in the `font-src` directory you can define overrides for these values in the `font-src/overrides.json` file.
 
-Below is an example of overriding font size and distance range for the Ubuntu-Regular font.
-
-```
+```json
 {
   "Ubuntu-Regular": {
     "msdf": {
-      "fontSize": 45
+      "fontSize": 45,
       "distanceRange": 6
     },
     "ssdf": {
-      "fontSize": 50
+      "fontSize": 50,
       "distanceRange": 6
     }
   }
 }
 ```
 
+### Atlas texture size
+
+Without a `textureSize` override, the atlas is auto-sized to the smallest power-of-two dimensions that fit all glyphs, up to 512 per side. If the glyphs don't fit on a single page at that size, additional pages are written (see [Multi-page atlases](#multi-page-atlases) below). This can happen with large charsets or large font sizes.
+
+To set an explicit page size and reduce or eliminate overflow, set `textureSize` in `overrides.json`. The value sets both width and height (square only) and must be a power of two.
+
+```json
+{
+  "Ubuntu-Regular": {
+    "msdf": {
+      "textureSize": 4096
+    }
+  }
+}
+```
+
+Common values: `512`, `1024`, `2048`, `4096`.
+
+## Multi-page atlases
+
+When a charset does not fit on a single atlas page, the generator writes multiple PNG files and records them in the `pages` array of the output JSON.
+
+**Example output for a font with 2 pages:**
+
+```
+font-dst/
+  Ubuntu-Regular.msdf.json
+  Ubuntu-Regular.msdf.png      ← page 0 (primary atlas)
+  Ubuntu-Regular.msdf_1.png    ← page 1
+```
+
+**`Ubuntu-Regular.msdf.json`** (relevant fields):
+```json
+{
+  "pages": ["Ubuntu-Regular.msdf.png", "Ubuntu-Regular.msdf_1.png"],
+  "chars": [
+    { "id": 65, "page": 0, "x": 10, "y": 20, "width": 20, "height": 24, ... },
+    { "id": 900, "page": 1, "x": 5,  "y": 30, "width": 18, "height": 22, ... }
+  ],
+  "lightningMetrics": { "ascender": 1974, "descender": -426, "lineGap": 0, "unitsPerEm": 2048 }
+}
+```
+
+Key points for renderer integration:
+- **Page 0** always keeps the unindexed filename (`Font.msdf.png`) so `atlasUrl` continues to resolve without changes for single-page fonts.
+- **Pages 1+** use `_N` suffixes (`Font.msdf_1.png`, `Font.msdf_2.png`, …).
+- Each entry in `chars` has a `page` field (0-indexed) indicating which atlas page the glyph lives on. This is standard BMFont format.
+- `lightningMetrics` is a root-level field, not per-page.
+- Rendering a glyph requires sampling from the atlas page indicated by `char.page`.
 
 ## CI/CD Pipeline Build Failures and Platform Compatibility
 

@@ -53,6 +53,7 @@ export interface SdfFontInfo {
   fontPath: string;
   jsonPath: string;
   pngPath: string;
+  pngPaths: string[];
   dstDir: string;
 }
 
@@ -64,12 +65,16 @@ type FontOptions = {
   pot: boolean;
   fontSize: number;
   distanceRange: number;
+  textureSize?: [number, number];
   charset?: string;
 }
 
 interface CharsetConfig{
   charset: string,
-  presets: string[]
+  presets: string[],
+  fontSize?: number,
+  distanceRange?: number,
+  textureSize?: number,
 }
 
 /**
@@ -97,9 +102,11 @@ export async function genFont(fontFileName: string, fieldType: 'ssdf' | 'msdf'):
 
   const fontNameNoExt = fontFileName.split('.')[0]!;
   const overrides = fs.existsSync(overridesPath) ? JSON.parse(fs.readFileSync(overridesPath, 'utf8')) : {};
-  const font_size = overrides[fontNameNoExt]?.[fieldType]?.fontSize || 42;
-  const distance_range =
-    overrides[fontNameNoExt]?.[fieldType]?.distanceRange || 4;
+  const config: CharsetConfig | null = fs.existsSync(charsetPath) ? JSON.parse(fs.readFileSync(charsetPath, 'utf8')) : null;
+
+  const font_size = config?.fontSize ?? overrides[fontNameNoExt]?.[fieldType]?.fontSize ?? 42;
+  const distance_range = config?.distanceRange ?? overrides[fontNameNoExt]?.[fieldType]?.distanceRange ?? 4;
+  const textureSizeOverride: number | undefined = config?.textureSize ?? overrides[fontNameNoExt]?.[fieldType]?.textureSize;
 
   let options: FontOptions = {
     fieldType: bmfont_field_type,
@@ -109,10 +116,10 @@ export async function genFont(fontFileName: string, fieldType: 'ssdf' | 'msdf'):
     pot: true,
     fontSize: font_size,
     distanceRange: distance_range,
+    ...(textureSizeOverride ? { textureSize: [textureSizeOverride, textureSizeOverride] } : {}),
   }
 
-  if (fs.existsSync(charsetPath)) {
-    const config:CharsetConfig =  JSON.parse(fs.readFileSync(charsetPath, 'utf8'))
+  if (config) {
     let charset = config.charset
     const presetsToApply = config.presets ? config.presets : []
     for (let i = 0; i < presetsToApply.length; i++ ){
@@ -126,13 +133,14 @@ export async function genFont(fontFileName: string, fieldType: 'ssdf' | 'msdf'):
     options['charset'] = charset
   }
 
-  await generateFont(fontPath, fontDstDir, fontNameNoExt, fieldType, options)
+  const { pngPaths } = await generateFont(fontPath, fontDstDir, fontNameNoExt, fieldType, options)
 
   const info: SdfFontInfo = {
     fontName: fontNameNoExt,
     fieldType,
     jsonPath: path.join(fontDstDir, `${fontNameNoExt}.${fieldType}.json`),
-    pngPath: path.join(fontDstDir, `${fontNameNoExt}.${fieldType}.png`),
+    pngPath: pngPaths[0] ?? path.join(fontDstDir, `${fontNameNoExt}.${fieldType}.png`),
+    pngPaths,
     fontPath,
     dstDir: fontDstDir,
   };
@@ -140,7 +148,7 @@ export async function genFont(fontFileName: string, fieldType: 'ssdf' | 'msdf'):
   return info;
 }
 
-const generateFont = (fontSrcPath: string, fontDestPath: string, fontName: string, fieldType: string, options: FontOptions): Promise<void> => {
+const generateFont = (fontSrcPath: string, fontDestPath: string, fontName: string, fieldType: string, options: FontOptions): Promise<{ pngPaths: string[] }> => {
   return new Promise((resolve, reject) => {
     if (!fs.existsSync(fontDestPath)) {
       fs.mkdirSync(fontDestPath, { recursive: true })
@@ -153,19 +161,32 @@ const generateFont = (fontSrcPath: string, fontDestPath: string, fontName: strin
           console.error(err)
           reject(err)
         } else {
-          textures.forEach((texture: any) => {
-            try {
-              fs.writeFileSync(path.resolve(fontDestPath, `${fontName}.${fieldType}.png`), texture.texture)
-            } catch (e) {
-              console.error(e)
-              reject(e)
-            }
-          })
+          const pngPaths: string[] = []
           try {
-            fs.writeFileSync(path.resolve(fontDestPath, `${fontName}.${fieldType}.json`), font.data)
-            resolve()
+            textures.forEach((texture: any, index: number) => {
+              // Page 0 keeps the unindexed name so atlasUrl resolves without a suffix.
+              // Extra pages get _1, _2, ... suffixes.
+              const filename = (textures.length > 1 && index > 0)
+                ? `${fontName}.${fieldType}_${index}.png`
+                : `${fontName}.${fieldType}.png`
+              const texturePath = path.resolve(fontDestPath, filename)
+              fs.writeFileSync(texturePath, texture.texture)
+              pngPaths.push(texturePath)
+            })
           } catch (e) {
-            console.error(err)
+            console.error(e)
+            reject(e)
+            return
+          }
+          try {
+            // msdf-bmfont-xml sets pages[] to its own internal names — overwrite with
+            // the actual filenames written to disk.
+            const json = JSON.parse(font.data)
+            json.pages = pngPaths.map(p => path.basename(p))
+            fs.writeFileSync(path.resolve(fontDestPath, `${fontName}.${fieldType}.json`), JSON.stringify(json))
+            resolve({ pngPaths })
+          } catch (e) {
+            console.error(e)
             reject(e)
           }
         }
