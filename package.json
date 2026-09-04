@@ -42,6 +42,9 @@
     "msdf-bmfont-xml": "^2.8.0",
     "opentype.js": "1.3.4"
   },
+  "overrides": {
+    "handlebars": "4.7.9"
+  },
   "files": [
     "dist",
     "src",
