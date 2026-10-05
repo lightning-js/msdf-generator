@@ -1,13 +1,9 @@
 # Changelog
 
-## 1.4.1
-
+## 1.4.0
+- Fix: removed an outdated baseline/y-offset correction in `adjustFont.ts` that was misaligning generated fonts (affects fonts generated with v1.2.0 through v1.3.0).
 - Migrated to `opentype.js` 2.0.0 — replaced the `opentype.load()` with `opentype.parse()` 
 - Updated `tsconfig.json` for TypeScript 7 — set `moduleResolution` to `"Bundler"` and removed the no-longer-supported `baseUrl` option.
-
-## 1.3.1
-
-- Fix: removed an outdated baseline/y-offset correction in `adjustFont.ts` that was misaligning generated fonts (affects fonts generated with v1.2.0 through v1.3.0).
 
 ## 1.3.0
 
