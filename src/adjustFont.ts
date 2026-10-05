@@ -33,11 +33,12 @@ export async function adjustFont(fontInfo: SdfFontInfo) {
   console.log(chalk.magenta(`Adjusting ${chalk.bold(path.basename(fontInfo.jsonPath))}...`));
   const [
     jsonFileContents,
-    font,
+    fontBuffer,
   ] = await Promise.all([
     fs.readFile(fontInfo.jsonPath, 'utf8'),
-    opentype.load(fontInfo.fontPath),
+    fs.readFile(fontInfo.fontPath),
   ]);
+  const font = opentype.parse(fontBuffer.buffer.slice(fontBuffer.byteOffset, fontBuffer.byteOffset + fontBuffer.byteLength));
   const json = JSON.parse(jsonFileContents);
 
   const fontMetrics = {
